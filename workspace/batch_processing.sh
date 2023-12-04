@@ -19,10 +19,36 @@ if [[ ! $name_raw_dir =~ "RawVideos" ]]; then
     exit 0
 fi 
 
-if [[ ! -e "$HOME/mnt/network/behavgenom/${name_raw_dir}" ]]; then 
-    echo "The RawVideos path doesn't exist and the terminal will be terminated"
-    exit 0
+
+
+if [[ $(basename $name_raw_dir) = "RawVideos" ]]; then
+    if [[ ! -e "$HOME/mnt/network/behavgenom/${name_raw_dir}" ]]; then 
+        echo "The RawVideos path (folder) doesn't exist and the terminal will be terminated"
+        exit 0
+    fi
+else
+    name_raw_dir_bsname=$(basename $name_raw_dir | tr "," "\n")
+    name_raw_dir_dirname=$(dirname $name_raw_dir)
+    i=0
+    for folder in $name_raw_dir_bsname; do 
+        (( i++ ))
+        echo "Folder day $i"
+        
+        if [[ ! -e "$HOME/mnt/network/behavgenom/${name_raw_dir_dirname}/${folder}" ]]; then 
+            
+            echo "The RawVideos path ($folder) doesn't exist and the terminal will be terminated"
+            exit 0
+        fi
+    done 
 fi 
+
+
+
+
+#if [[ ! -e "$HOME/mnt/network/behavgenom/${name_raw_dir}" ]]; then 
+ #   echo "The RawVideos path doesn't exist and the terminal will be terminated"
+ #   exit 0
+#fi 
 
 #  Select the parameters file 
 PS3='Please enter your choice of well parameters file: '
@@ -74,25 +100,49 @@ if [[ ! ${path_file} = *.json ]] && [[ ! -e ${path_file} ]]; then
     exit 0
 fi 
 
-mkdir -p "$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/log}/files2process"
-log_dir=("$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/log}/files2process")
+rwdir_flder="$HOME/mnt/network/behavgenom/${name_raw_dir}"
+
+mkdir -p "${rwdir_flder%RawVideos*}log/files2process"
+log_dir=("${rwdir_flder%RawVideos*}log/files2process")
 echo "Please wait for few minutes until we fetch all the files to process"
 Time_stamp=$( date +%Y%m%d_%H%M_%S )
 
 module load miniconda3
 conda activate tierpsy
-tierpsy_process --video_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir}" \
- --mask_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/MaskedVideos}" \
- --results_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/Results}" \
- --only_summary \
- --max_num_process 10\
- --tmp_dir_root ''\
- --pattern_include "*.yaml" \
- --json_file "$path_file" \
- --is_debug --copy_unfinished | tee "$log_dir/tierpsy_output_$Time_stamp.txt"
+echo "The parameter file is a ${params_file_name} well ($(basename $path_file)) " >>"$(dirname $log_dir )/log.txt"
+if [[ $(basename $name_raw_dir) = "RawVideos" ]]; then
+    tierpsy_process --video_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir}" \
+    --mask_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/MaskedVideos}" \
+    --results_dir_root "$HOME/mnt/network/behavgenom/${name_raw_dir/RawVideos/Results}" \
+    --only_summary \
+    --max_num_process 10\
+    --tmp_dir_root ''\
+    --pattern_include "*.yaml" \
+    --json_file "$path_file" \
+    --is_debug --copy_unfinished | tee "$log_dir/tierpsy_output_$Time_stamp.txt"
 
-python $PWD/Behavgenom_jex/workspace/filter_files2process.py --input_file="$log_dir/tierpsy_output_$Time_stamp.txt" --output_file="$log_dir/files2process_$Time_stamp.txt"
+    python $PWD/Behavgenom_jex/workspace/filter_files2process.py --input_file="$log_dir/tierpsy_output_$Time_stamp.txt" --output_file="$log_dir/files2process_$Time_stamp.txt"
+else
+    name_raw_dir_bsname=$(basename $name_raw_dir | tr "," "\n")
+    name_raw_dir_dirname=$(dirname $name_raw_dir)
+    ii=0
+    for folder in $name_raw_dir_bsname; do 
+        (( ii++ ))
+        filepath="$HOME/mnt/network/behavgenom/${name_raw_dir_dirname}/${folder}"
+        tierpsy_process --video_dir_root $filepath \
+        --mask_dir_root ${filepath/RawVideos/MaskedVideos} \
+        --results_dir_root /${filepath/RawVideos/Results} \
+        --only_summary \
+        --tmp_dir_root ''\
+        --max_num_process 5\
+        --pattern_include "*.yaml" \
+        --json_file "$path_file" \
+        --is_debug --copy_unfinished | tee "$log_dir/tierpsy_output_$Time_stamp.txt"
 
+        python $PWD/Behavgenom_jex/workspace/filter_files2process.py --input_file="$log_dir/tierpsy_output_$Time_stamp.txt" --output_file="$log_dir/files2process_$Time_stamp.txt"
+        echo " Folder day $ii out of day $i"
+    done 
+fi
 
 num_files=$(cat $log_dir/files2process_$Time_stamp.txt | wc -l)
 (( num_files++ ))

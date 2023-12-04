@@ -28,4 +28,6 @@ parts = out.split(split_token)
 cmds = ['python ' +  x.partition(' ')[-1] for x in parts[4].split('\n')]
 
 with open(dst_file, 'w') as fid:
+    if dst_file.exists:
+        fid.write('\n')
     fid.write('\n'.join(cmds))
