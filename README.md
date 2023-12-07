@@ -6,7 +6,7 @@ You can interact with jex with a `ssh` shell.
 
 #### If you are working remotely
 You cannot connect to jex directly from outside the LMS network, even if you're on the VPN.\
-You'll need to contact the LMS IT and ask them to give you access to the Terminal Server. They will configure that for you, and help you set up PuTTY so you can connect to jex, following the instructions below, via the Terminal Server.
+You'll need to contact the LMS IT and ask them to give you access to the Terminal Server. They will configure that for you, and help you set up PuTTY so you can connect to Jex, following the instructions below, via the Terminal Server.
 
 #### From within the LMS network
 Open a terminal in your local machine and login to Jex, using the command:
